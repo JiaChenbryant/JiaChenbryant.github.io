@@ -1,61 +1,242 @@
 <!DOCTYPE html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>便捷网站</title>
-     <style>
-     a{
-         font-size:40px;color: #6d00ff;}
-         body {
-            font-family: Arial, sans-serif;
-            background-color: #13d259;
-            margin: 0;
-            padding: 0;
-        }
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>防伪图片验证</title>
+    <style>
+        /* 保持原有样式不变 */
+        .container { padding: 20px; }
+        .upload-section { margin-bottom: 30px; }
+        .result { margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
 
-        .container {
-       display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      justify-items: center;
-      align-items: center;
-      height: 300px;
+        /* 新增布局样式 */
+        .main-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-
-        h1 {
-            color: #333;
-            text-align: center;
+        .upload-group {
+            display: flex;
+            gap: 40px;
+            margin: 20px 0;
         }
-
-       .button {
-           width: 100px;
-           height: 50px;
-           border: none;
-           font-size: 16px;
-           cursor: pointer;
-           display: inline-block;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: #fff;
-            text-decoration: none;
-            text-align: center;
-            border-radius: 6px;
-            transition: background-color 0.3s ease;
-       }
-     </style>
+        .image-preview {
+            display: flex;
+            gap: 40px;
+            margin-top: 20px;
+        }
+        .preview-container {
+            width: 300px;
+            height: 200px;
+            border: 2px dashed #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #verifyButton {
+            margin: 30px 0;
+            padding: 12px 24px;
+            font-size: 16px;
+        }
+    </style>
+    </style>
 </head>
 <body>
-<h1>Welcome to my website</h1>
-<div class="container">
-    <a href="https://physics.scnu.edu.cn/" class="button" target="_blank" title="物院官网">物院官网</a> <br/> <br/>
-    <a href="https://sso.scnu.edu.cn/AccountService/user/login.html;jsessionid=18CAA78004B2DDED9520EAA0399ED904" class="button" target="_blank" title="统一登录">统一登录</a> <br/> <br/>
-    <a href="https://ssp.scnu.edu.cn/" target="_blank"  class="button" title="Fx服务平台">Fx高校服务平台</a> <br/> <br/>
-    <a href="https://github.com/JiaChenbryant/JiaChenbryant.github.io/blob/main/index.html"  class="button" target="_blank" >github官网</a> <br/> <br/>
-    <a href="https://hscwxf.scnu.edu.cn/" target="_blank"  class="button" title="统一支付平台">统一支付平台</a> <br/> <br/>
-    <a href="https://www.pigai.org/" target="_blank"  class="button" title="批改网">批改网</a> <br/> <br/>
-    <a href="https://sci-hub.org.cn/" target="_blank" class="button" >SCI文献检索</a><br/> <br/>
-    <a href="https://github.com/JiaChenbryant/JiaChenbryant.github.io/edit/main/index.html" target="_blank" class="button" >修改网站</a><br/> <br/>
-    <a href="http://10.248.56.27/Home/DesktopStudent?&tkn=1-F18132F6B6A55D543D9AD84AB64FC20B" target="_blank" class="button" >大创</a><br/> <br/>
-    <a href="https://cet.neea.edu.cn/" class="button" >四六级</a><br/> <br/>
+<div class="main-layout">
+    <!-- 上传按钮组 -->
+    <div class="upload-group">
+        <div class="upload-section">
+            <input type="file" id="standardFile" accept="image/*">
+            <div id="standardResult" class="result"></div>
+        </div>
+        <div class="upload-section">
+            <input type="file" id="testFile" accept="image/*">
+            <div id="testResult" class="result"></div>
+        </div>
+    </div>
+
+    <!-- 验证按钮 -->
+    <button id="verifyButton" onclick="verifyFunction()">执行验证</button>
+
+    <!-- 图片预览区域 -->
+    <div class="image-preview">
+        <div class="preview-container">
+            <img id="standardPreview" alt="标准图片预览" style="max-width: 100%; max-height: 100%;">
+        </div>
+        <div class="preview-container">
+            <img id="testPreview" alt="测试图片预览" style="max-width: 100%; max-height: 100%;">
+        </div>
+    </div>
 </div>
-</div>
+
+
+
+<script>
+    let standardResult = null;
+    let testResult = null;
+    function processImage(img, resultDiv) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // 限制处理尺寸以提高性能
+        const MAX_SIZE = 500;
+        const scale = Math.min(MAX_SIZE/img.width, MAX_SIZE/img.height);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+        // 转换到HSV颜色空间
+        const hsvData = rgbToHSV(imageData.data);
+
+        // 进行颜色分析
+        const result = analyzeColors(hsvData, canvas.width, canvas.height);
+
+        resultDiv.innerHTML = `
+                绿色比例: ${(result.g * 100).toFixed(1)}%<br>
+                黄色比例: ${(result.y * 100).toFixed(1)}%
+            `;
+        // 返回红色和绿色部分的占比
+        return {
+            greenPercentage: (result.g * 100).toFixed(1),
+            yellowPercentage: (result.y * 100).toFixed(1)  // 修正属性名
+        };
+    }
+
+    function rgbToHSV(rgbData) {
+        const hsvData = new Array(rgbData.length/4);
+        for(let i=0; i<rgbData.length; i+=4) {
+            const r = rgbData[i]/255;
+            const g = rgbData[i+1]/255;
+            const b = rgbData[i+2]/255;
+
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            let h = 0;
+
+            if(max !== min) {
+                const d = max - min;
+                switch(max) {
+                    case r: h = (g - b)/d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r)/d + 2; break;
+                    case b: h = (r - g)/d + 4; break;
+                }
+                h /= 6;
+            }
+            const s = max === 0 ? 0 : (max - min)/max;
+            hsvData[i/4] = [h, s, max]; // [H, S, V]
+        }
+        return hsvData;
+    }
+
+    function analyzeColors(hsvData, width, height) {
+        // 亮度通道处理
+        const vMask = new Array(width*height).fill(0);
+        hsvData.forEach(([h,s,v], i) => {
+            if(v >= 0.6) vMask[i] = 1;
+        });
+
+        // 连通区域分析
+        const flowerRegions = findRegions(vMask, width, height);
+        const flowerArea = flowerRegions.reduce((sum, area) => area >= 200 ? sum + area : sum, 0);
+
+        // 绿色分析
+        const greenMask = hsvData.map(([h,s,v]) =>
+            (h >= 0.18 && h <= 0.4) ? 1 : 0
+        );
+        const greenRegions = findRegions(greenMask, width, height);
+        const greenArea = greenRegions.reduce((sum, area) => area >= 200 ? sum + area : sum, 0);
+
+        // 黄色分析
+        const yellowMask = hsvData.map(([h,s,v]) =>
+            (h <= 0.2) ? 1 : 0
+        );
+        const yellowRegions = findRegions(yellowMask, width, height);
+        const yellowArea = yellowRegions.reduce((sum, area) => area >= 200 ? sum + area : sum, 0);
+
+        return {
+            g: flowerArea ? greenArea / flowerArea : 0,
+            y: flowerArea ? yellowArea / flowerArea : 0
+        };
+    }
+
+    // 连通区域标记算法
+    function findRegions(mask, width, height) {
+        const visited = new Array(mask.length).fill(false);
+        const regions = [];
+
+        for(let y=0; y<height; y++) {
+            for(let x=0; x<width; x++) {
+                const idx = y*width + x;
+                if(mask[idx] && !visited[idx]) {
+                    const area = floodFill(x, y, mask, visited, width, height);
+                    regions.push(area);
+                }
+            }
+        }
+        return regions;
+    }
+
+    // 洪水填充算法
+    function floodFill(startX, startY, mask, visited, width, height) {
+        const stack = [[startX, startY]];
+        let area = 0;
+
+        while(stack.length) {
+            const [x, y] = stack.pop();
+            const idx = y*width + x;
+
+            if(x<0 || x>=width || y<0 || y>=height) continue;
+            if(!mask[idx] || visited[idx]) continue;
+
+            visited[idx] = true;
+            area++;
+
+            stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+        }
+        return area;
+    }
+
+    // 文件处理
+    function setupFileInput(inputId, resultId, previewId) {
+        document.getElementById(inputId).addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if(!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+// 更新预览图片
+                    document.getElementById(previewId).src = event.target.result;
+                    const result=processImage(img, document.getElementById(resultId));
+                    if(inputId === 'standardFile') {
+                        standardResult = result;
+                    } else {
+                        testResult = result;
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    setupFileInput('standardFile', 'standardResult', 'standardPreview');
+    setupFileInput('testFile', 'testResult', 'testPreview');
+
+    function verifyFunction() {
+        const g_difference=(standardResult.greenPercentage-testResult.greenPercentage)/standardResult.greenPercentage
+        const y_difference=(standardResult.yellowPercentage-testResult.yellowPercentage)/standardResult.yellowPercentage
+        if(g_difference<0.1 && y_difference<0.1){
+            alert('验证成功')
+        }else {
+            alert('验证失败')
+        }
+    }
+
+</script>
 </body>
+</html>
