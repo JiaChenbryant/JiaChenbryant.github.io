@@ -230,7 +230,7 @@
     function verifyFunction() {
         const g_difference=(standardResult.greenPercentage-testResult.greenPercentage)/standardResult.greenPercentage
         const y_difference=(standardResult.yellowPercentage-testResult.yellowPercentage)/standardResult.yellowPercentage
-        if(g_difference<0.1 && y_difference<0.1){
+        if(Math.abs(g_difference)<0.1 && Math.abs(y_difference)<0.1){
             alert('验证成功')
         }else {
             alert('验证失败')
