@@ -57,15 +57,15 @@
     </div>
 
     <!-- 验证按钮 -->
-    <button id="verifyButton" onclick="verifyFunction()">执行验证</button>
+    <button id="verifyButton" onclick="verifyFunction()">Verify</button>
 
     <!-- 图片预览区域 -->
     <div class="image-preview">
         <div class="preview-container">
-            <img id="standardPreview" alt="标准图片预览" style="max-width: 100%; max-height: 100%;">
+            <img id="standardPreview" alt="Standard Image Preview" style="max-width: 100%; max-height: 100%;">
         </div>
         <div class="preview-container">
-            <img id="testPreview" alt="测试图片预览" style="max-width: 100%; max-height: 100%;">
+            <img id="testPreview" alt="Test Image Preview" style="max-width: 100%; max-height: 100%;">
         </div>
     </div>
 </div>
@@ -95,8 +95,8 @@
         const result = analyzeColors(hsvData, canvas.width, canvas.height);
 
         resultDiv.innerHTML = `
-                绿色比例: ${(result.g * 100).toFixed(1)}%<br>
-                黄色比例: ${(result.y * 100).toFixed(1)}%
+                green ratio: ${(result.g * 100).toFixed(1)}%<br>
+                yellow ratio: ${(result.y * 100).toFixed(1)}%
             `;
         // 返回红色和绿色部分的占比
         return {
@@ -231,9 +231,9 @@
         const g_difference=(standardResult.greenPercentage-testResult.greenPercentage)/standardResult.greenPercentage
         const y_difference=(standardResult.yellowPercentage-testResult.yellowPercentage)/standardResult.yellowPercentage
         if(Math.abs(g_difference)<0.1 && Math.abs(y_difference)<0.1){
-            alert('验证成功')
+            alert('Image verification successful!')
         }else {
-            alert('验证失败')
+            alert('Image verification failed.')
         }
     }
 
