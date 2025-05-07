@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>防伪图片验证</title>
     <style>
+        .hidden-input {
+            opacity: 0; /* 隐藏原生输入框 */
+            position: absolute;
+            width: 0.1px;
+            height: 0.1px;
+        }
+
         /* 保持原有样式不变 */
         .container { padding: 20px; }
         .upload-section { margin-bottom: 30px; }
@@ -40,18 +47,25 @@
             font-size: 16px;
         }
     </style>
-    </style>
 </head>
 <body>
 <div class="main-layout">
     <!-- 上传按钮组 -->
     <div class="upload-group">
         <div class="upload-section">
-            <input type="file" id="standardFile" accept="image/*">
+
+            <label class="custom-upload">
+                <input type="file" id="standardFile" accept="image/*" class="hidden-input">
+                <span>Upload Standard Image</span> <!-- 自定义中文提示 -->
+            </label>
+
             <div id="standardResult" class="result"></div>
         </div>
         <div class="upload-section">
-            <input type="file" id="testFile" accept="image/*">
+            <label class="custom-upload">
+                <input type="file" id="testFile" accept="image/*" class="hidden-input">
+                <span>Upload Verification Image</span> <!-- 自定义中文提示 -->
+            </label>
             <div id="testResult" class="result"></div>
         </div>
     </div>
