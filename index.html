@@ -145,36 +145,47 @@
         return hsvData;
     }
 
+
     function analyzeColors(hsvData, width, height) {
-        // 亮度通道处理
+        // 亮度通道处理（提取花朵主体区域）
         const vMask = new Array(width*height).fill(0);
         hsvData.forEach(([h,s,v], i) => {
-            if(v >= 0.6) vMask[i] = 1;
+            // 更严格的亮度阈值，确保只识别花朵主体
+            if(v >= 0.7) vMask[i] = 1;  // 原阈值0.6改为0.7
         });
 
-        // 连通区域分析
+        // 连通区域分析（花朵区域）
         const flowerRegions = findRegions(vMask, width, height);
         const flowerArea = flowerRegions.reduce((sum, area) => area >= 200 ? sum + area : sum, 0);
 
-        // 绿色分析
-        const greenMask = hsvData.map(([h,s,v]) =>
-            (h >= 0.18 && h <= 0.4) ? 1 : 0
-        );
-        const greenRegions = findRegions(greenMask, width, height);
-        const greenArea = greenRegions.reduce((sum, area) => area >= 200 ? sum + area : sum, 0);
+        // 颜色分析仅针对花朵区域
+        const totalPixels = width * height;
+        let greenPixels = 0;
+        let yellowPixels = 0;
 
-        // 黄色分析
-        const yellowMask = hsvData.map(([h,s,v]) =>
-            (h <= 0.2) ? 1 : 0
-        );
-        const yellowRegions = findRegions(yellowMask, width, height);
-        const yellowArea = yellowRegions.reduce((sum, area) => area >= 200 ? sum + area : sum, 0);
+        hsvData.forEach(([h,s,v], i) => {
+            if(vMask[i] !== 1) return; // 仅处理花朵区域
 
+            // 添加饱和度约束（s > 0.3）排除灰暗像素
+            if(s < 0.3) return;
+
+            // 互斥颜色判断（优先级：黄色 > 绿色）
+            if(h <= 0.18) { // 黄色范围 0°-65° (0-0.18)
+                yellowPixels++;
+            } else if(h >= 0.22 && h <= 0.45) { // 绿色范围 80°-162° (0.22-0.45)
+                greenPixels++;
+            }
+        });
+
+        // 面积计算改用像素计数代替连通区域
         return {
-            g: flowerArea ? greenArea / flowerArea : 0,
-            y: flowerArea ? yellowArea / flowerArea : 0
+            g: flowerArea ? greenPixels / flowerArea : 0,
+            y: flowerArea ? yellowPixels / flowerArea : 0
         };
     }
+
+
+
 
     // 连通区域标记算法
     function findRegions(mask, width, height) {
