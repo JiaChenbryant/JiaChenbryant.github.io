@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>蓝花绿叶防伪图片验证</title>
+  <title>Blue Flower and Green Leaf Image Verification</title>
   <style>
-    body { margin: 0; font-family: Arial, "Microsoft YaHei", sans-serif; color: #253044; background: #f8fafc; }
+    body { margin: 0; font-family: Arial, sans-serif; color: #253044; background: #f8fafc; }
     .main-layout { display: flex; flex-direction: column; align-items: center; padding: 36px 16px; }
     .upload-group, .image-preview { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; width: 100%; }
     .upload-section { width: 300px; text-align: center; }
@@ -21,28 +21,28 @@
 </head>
 <body>
   <div class="main-layout">
-    <h2>蓝花绿叶防伪图片验证</h2>
+    <h2>Blue Flower and Green Leaf Image Verification</h2>
     <div class="upload-group">
       <div class="upload-section">
         <label class="custom-upload">
           <input type="file" id="standardFile" accept="image/*" class="hidden-input">
-          Upload Standard Image（上传标准图片）
+          Upload Standard Image
         </label>
-        <div id="standardResult" class="result">尚未上传标准图片</div>
+        <div id="standardResult" class="result">No standard image uploaded</div>
       </div>
       <div class="upload-section">
         <label class="custom-upload">
           <input type="file" id="testFile" accept="image/*" class="hidden-input">
-          Upload Verification Image（上传待验证图片）
+          Upload Verification Image
         </label>
-        <div id="testResult" class="result">尚未上传待验证图片</div>
+        <div id="testResult" class="result">No verification image uploaded</div>
       </div>
     </div>
-    <button id="verifyButton" type="button" onclick="verifyFunction()">Verify（验证）</button>
+    <button id="verifyButton" type="button" onclick="verifyFunction()">Verify</button>
     <div id="verificationResult" role="status" aria-live="polite"></div>
     <div class="image-preview">
-      <div class="preview-container"><img id="standardPreview" alt="标准图片预览"></div>
-      <div class="preview-container"><img id="testPreview" alt="待验证图片预览"></div>
+      <div class="preview-container"><img id="standardPreview" alt="Standard Image Preview"></div>
+      <div class="preview-container"><img id="testPreview" alt="Verification Image Preview"></div>
     </div>
   </div>
 
@@ -50,7 +50,7 @@
     let standardResult = null;
     let testResult = null;
 
-    // 处理图片：保持纵横比，并将最长边缩放到最多500像素（不放大小图）。
+    // Resize images while preserving aspect ratio. Do not upscale small images.
     function processImage(img, resultDiv) {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -87,8 +87,8 @@
       return hsvData;
     }
 
-    // 亮度阈值V>=0.7；仅保留至少200像素的四邻域连通区域。
-    // 绿色H=0.22~0.45（约80°~162°），蓝色H=0.50~0.72（180°~259.2°）。
+    // Brightness threshold V >= 0.7; retain 4-connected regions with at least 200 pixels.
+    // Green hue: 0.22-0.45 (approx. 80-162 degrees); blue hue: 0.50-0.72 (180-259.2 degrees).
     function analyzeColors(hsvData, width, height) {
       const vMask = new Uint8Array(width * height);
       for (let i = 0; i < hsvData.length; i++) {
@@ -112,7 +112,7 @@
       };
     }
 
-    // 迭代式洪水填充；返回属于符合面积要求连通区域的像素掩码。
+    // Iterative flood fill: return a mask of pixels belonging to qualifying regions.
     function findValidRegions(mask, width, height, minArea) {
       const visited = new Uint8Array(mask.length);
       const valid = new Uint8Array(mask.length);
@@ -153,12 +153,12 @@
         else testResult = null;
         document.getElementById('verificationResult').textContent = '';
         const resultDiv = document.getElementById(resultId);
-        resultDiv.textContent = '正在处理图片...';
+        resultDiv.textContent = 'Processing image...';
         const reader = new FileReader();
-        reader.onerror = () => { resultDiv.textContent = '文件读取失败'; };
+        reader.onerror = () => { resultDiv.textContent = 'Failed to read file'; };
         reader.onload = function(event) {
           const img = new Image();
-          img.onerror = () => { resultDiv.textContent = '无法解析图片'; };
+          img.onerror = () => { resultDiv.textContent = 'Unable to load image'; };
           img.onload = function() {
             document.getElementById(previewId).src = event.target.result;
             try {
@@ -166,7 +166,7 @@
               if (inputId === 'standardFile') standardResult = result;
               else testResult = result;
             } catch (err) {
-              resultDiv.textContent = '图片处理失败：' + err.message;
+              resultDiv.textContent = 'Image processing failed: ' + err.message;
             }
           };
           img.src = event.target.result;
@@ -181,14 +181,14 @@
     function verifyFunction() {
       const output = document.getElementById('verificationResult');
       if (!standardResult || !testResult) {
-        output.textContent = '请先上传标准图片和待验证图片。';
+        output.textContent = 'Please upload both the standard and verification images.';
         alert(output.textContent);
         return;
       }
       const g0 = standardResult.g;
       const b0 = standardResult.b;
       if (g0 === 0 || b0 === 0) {
-        output.textContent = '标准图片中没有识别到有效的绿色或蓝色区域，请检查拍摄条件和阈值。';
+        output.textContent = 'No valid green or blue region detected in the standard image. Check the lighting and color thresholds.';
         alert(output.textContent);
         return;
       }
