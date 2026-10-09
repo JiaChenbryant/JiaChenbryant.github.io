@@ -1,267 +1,206 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>防伪图片验证</title>
-    <style>
-        .hidden-input {
-            opacity: 0; /* 隐藏原生输入框 */
-            position: absolute;
-            width: 0.1px;
-            height: 0.1px;
-        }
-
-        /* 保持原有样式不变 */
-        .container { padding: 20px; }
-        .upload-section { margin-bottom: 30px; }
-        .result { margin-top: 10px; padding: 10px; border: 1px solid #ccc; }
-
-        /* 新增布局样式 */
-        .main-layout {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .upload-group {
-            display: flex;
-            gap: 40px;
-            margin: 20px 0;
-        }
-        .image-preview {
-            display: flex;
-            gap: 40px;
-            margin-top: 20px;
-        }
-        .preview-container {
-            width: 300px;
-            height: 200px;
-            border: 2px dashed #ccc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        #verifyButton {
-            margin: 30px 0;
-            padding: 12px 24px;
-            font-size: 16px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>蓝花绿叶防伪图片验证</title>
+  <style>
+    body { margin: 0; font-family: Arial, "Microsoft YaHei", sans-serif; color: #253044; background: #f8fafc; }
+    .main-layout { display: flex; flex-direction: column; align-items: center; padding: 36px 16px; }
+    .upload-group, .image-preview { display: flex; flex-wrap: wrap; justify-content: center; gap: 32px; width: 100%; }
+    .upload-section { width: 300px; text-align: center; }
+    .custom-upload { display: inline-block; padding: 12px 16px; color: white; background: #2563eb; border-radius: 8px; cursor: pointer; }
+    .hidden-input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+    .result { margin-top: 12px; min-height: 44px; padding: 10px; background: #fff; border: 1px solid #dbe1e8; border-radius: 8px; line-height: 1.7; }
+    .preview-container { width: 300px; height: 200px; border: 2px dashed #cbd5e1; border-radius: 8px; background: #fff; display: flex; align-items: center; justify-content: center; }
+    .preview-container img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    #verifyButton { margin: 26px 0; padding: 12px 30px; font-size: 16px; background: #0f766e; border: 0; border-radius: 8px; color: white; cursor: pointer; }
+    #verifyButton:hover { background: #115e59; }
+    #verificationResult { min-height: 22px; font-weight: bold; text-align: center; }
+  </style>
 </head>
 <body>
-<div class="main-layout">
-    <!-- 上传按钮组 -->
+  <div class="main-layout">
+    <h2>蓝花绿叶防伪图片验证</h2>
     <div class="upload-group">
-        <div class="upload-section">
-
-            <label class="custom-upload">
-                <input type="file" id="standardFile" accept="image/*" class="hidden-input">
-                <span>Upload Standard Image</span> <!-- 自定义中文提示 -->
-            </label>
-
-            <div id="standardResult" class="result"></div>
-        </div>
-        <div class="upload-section">
-            <label class="custom-upload">
-                <input type="file" id="testFile" accept="image/*" class="hidden-input">
-                <span>Upload Verification Image</span> <!-- 自定义中文提示 -->
-            </label>
-            <div id="testResult" class="result"></div>
-        </div>
+      <div class="upload-section">
+        <label class="custom-upload">
+          <input type="file" id="standardFile" accept="image/*" class="hidden-input">
+          Upload Standard Image（上传标准图片）
+        </label>
+        <div id="standardResult" class="result">尚未上传标准图片</div>
+      </div>
+      <div class="upload-section">
+        <label class="custom-upload">
+          <input type="file" id="testFile" accept="image/*" class="hidden-input">
+          Upload Verification Image（上传待验证图片）
+        </label>
+        <div id="testResult" class="result">尚未上传待验证图片</div>
+      </div>
     </div>
-
-    <!-- 验证按钮 -->
-    <button id="verifyButton" onclick="verifyFunction()">Verify</button>
-
-    <!-- 图片预览区域 -->
+    <button id="verifyButton" type="button" onclick="verifyFunction()">Verify（验证）</button>
+    <div id="verificationResult" role="status" aria-live="polite"></div>
     <div class="image-preview">
-        <div class="preview-container">
-            <img id="standardPreview" alt="Standard Image Preview" style="max-width: 100%; max-height: 100%;">
-        </div>
-        <div class="preview-container">
-            <img id="testPreview" alt="Test Image Preview" style="max-width: 100%; max-height: 100%;">
-        </div>
+      <div class="preview-container"><img id="standardPreview" alt="标准图片预览"></div>
+      <div class="preview-container"><img id="testPreview" alt="待验证图片预览"></div>
     </div>
-</div>
+  </div>
 
-
-
-<script>
+  <script>
     let standardResult = null;
     let testResult = null;
+
+    // 处理图片：保持纵横比，并将最长边缩放到最多500像素（不放大小图）。
     function processImage(img, resultDiv) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-
-        // 限制处理尺寸以提高性能
-        const MAX_SIZE = 500;
-        const scale = Math.min(MAX_SIZE/img.width, MAX_SIZE/img.height);
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // 转换到HSV颜色空间
-        const hsvData = rgbToHSV(imageData.data);
-
-        // 进行颜色分析
-        const result = analyzeColors(hsvData, canvas.width, canvas.height);
-
-        resultDiv.innerHTML = `
-                green ratio: ${(result.g * 100).toFixed(1)}%<br>
-                yellow ratio: ${(result.y * 100).toFixed(1)}%
-            `;
-        // 返回红色和绿色部分的占比
-        return {
-            greenPercentage: (result.g * 100).toFixed(1),
-            yellowPercentage: (result.y * 100).toFixed(1)  // 修正属性名
-        };
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const MAX_SIZE = 500;
+      const scale = Math.min(1, MAX_SIZE / img.width, MAX_SIZE / img.height);
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const hsvData = rgbToHSV(imageData.data);
+      const result = analyzeColors(hsvData, canvas.width, canvas.height);
+      resultDiv.innerHTML = `green ratio: ${(result.g * 100).toFixed(1)}%<br>blue ratio: ${(result.b * 100).toFixed(1)}%`;
+      return result;
     }
 
     function rgbToHSV(rgbData) {
-        const hsvData = new Array(rgbData.length/4);
-        for(let i=0; i<rgbData.length; i+=4) {
-            const r = rgbData[i]/255;
-            const g = rgbData[i+1]/255;
-            const b = rgbData[i+2]/255;
-
-            const max = Math.max(r, g, b);
-            const min = Math.min(r, g, b);
-            let h = 0;
-
-            if(max !== min) {
-                const d = max - min;
-                switch(max) {
-                    case r: h = (g - b)/d + (g < b ? 6 : 0); break;
-                    case g: h = (b - r)/d + 2; break;
-                    case b: h = (r - g)/d + 4; break;
-                }
-                h /= 6;
-            }
-            const s = max === 0 ? 0 : (max - min)/max;
-            hsvData[i/4] = [h, s, max]; // [H, S, V]
+      const hsvData = new Array(rgbData.length / 4);
+      for (let i = 0; i < rgbData.length; i += 4) {
+        const r = rgbData[i] / 255;
+        const g = rgbData[i + 1] / 255;
+        const b = rgbData[i + 2] / 255;
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const d = max - min;
+        let h = 0;
+        if (d !== 0) {
+          if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+          else if (max === g) h = ((b - r) / d + 2) / 6;
+          else h = ((r - g) / d + 4) / 6;
         }
-        return hsvData;
+        const s = max === 0 ? 0 : d / max;
+        hsvData[i / 4] = [h, s, max];
+      }
+      return hsvData;
     }
 
-
+    // 亮度阈值V>=0.7；仅保留至少200像素的四邻域连通区域。
+    // 绿色H=0.22~0.45（约80°~162°），蓝色H=0.50~0.72（180°~259.2°）。
     function analyzeColors(hsvData, width, height) {
-        // 亮度通道处理（提取花朵主体区域）
-        const vMask = new Array(width*height).fill(0);
-        hsvData.forEach(([h,s,v], i) => {
-            // 更严格的亮度阈值，确保只识别花朵主体
-            if(v >= 0.7) vMask[i] = 1;  // 原阈值0.6改为0.7
-        });
+      const vMask = new Uint8Array(width * height);
+      for (let i = 0; i < hsvData.length; i++) {
+        if (hsvData[i][2] >= 0.7) vMask[i] = 1;
+      }
+      const validMask = findValidRegions(vMask, width, height, 200);
+      let flowerArea = 0;
+      let greenPixels = 0;
+      let bluePixels = 0;
+      for (let i = 0; i < hsvData.length; i++) {
+        if (!validMask[i]) continue;
+        flowerArea++;
+        const [h, s] = hsvData[i];
+        if (s < 0.3) continue;
+        if (h >= 0.50 && h <= 0.72) bluePixels++;
+        else if (h >= 0.22 && h <= 0.45) greenPixels++;
+      }
+      return {
+        g: flowerArea ? greenPixels / flowerArea : 0,
+        b: flowerArea ? bluePixels / flowerArea : 0
+      };
+    }
 
-        // 连通区域分析（花朵区域）
-        const flowerRegions = findRegions(vMask, width, height);
-        const flowerArea = flowerRegions.reduce((sum, area) => area >= 200 ? sum + area : sum, 0);
-
-        // 颜色分析仅针对花朵区域
-        const totalPixels = width * height;
-        let greenPixels = 0;
-        let yellowPixels = 0;
-
-        hsvData.forEach(([h,s,v], i) => {
-            if(vMask[i] !== 1) return; // 仅处理花朵区域
-
-            // 添加饱和度约束（s > 0.3）排除灰暗像素
-            if(s < 0.3) return;
-
-            // 互斥颜色判断（优先级：黄色 > 绿色）
-            if(h <= 0.18) { // 黄色范围 0°-65° (0-0.18)
-                yellowPixels++;
-            } else if(h >= 0.22 && h <= 0.45) { // 绿色范围 80°-162° (0.22-0.45)
-                greenPixels++;
+    // 迭代式洪水填充；返回属于符合面积要求连通区域的像素掩码。
+    function findValidRegions(mask, width, height, minArea) {
+      const visited = new Uint8Array(mask.length);
+      const valid = new Uint8Array(mask.length);
+      for (let start = 0; start < mask.length; start++) {
+        if (!mask[start] || visited[start]) continue;
+        const stack = [start];
+        const pixels = [];
+        visited[start] = 1;
+        while (stack.length) {
+          const idx = stack.pop();
+          pixels.push(idx);
+          const x = idx % width;
+          const y = Math.floor(idx / width);
+          const neighbors = [];
+          if (x > 0) neighbors.push(idx - 1);
+          if (x + 1 < width) neighbors.push(idx + 1);
+          if (y > 0) neighbors.push(idx - width);
+          if (y + 1 < height) neighbors.push(idx + width);
+          for (const next of neighbors) {
+            if (mask[next] && !visited[next]) {
+              visited[next] = 1;
+              stack.push(next);
             }
-        });
-
-        // 面积计算改用像素计数代替连通区域
-        return {
-            g: flowerArea ? greenPixels / flowerArea : 0,
-            y: flowerArea ? yellowPixels / flowerArea : 0
-        };
-    }
-
-
-
-
-    // 连通区域标记算法
-    function findRegions(mask, width, height) {
-        const visited = new Array(mask.length).fill(false);
-        const regions = [];
-
-        for(let y=0; y<height; y++) {
-            for(let x=0; x<width; x++) {
-                const idx = y*width + x;
-                if(mask[idx] && !visited[idx]) {
-                    const area = floodFill(x, y, mask, visited, width, height);
-                    regions.push(area);
-                }
-            }
+          }
         }
-        return regions;
-    }
-
-    // 洪水填充算法
-    function floodFill(startX, startY, mask, visited, width, height) {
-        const stack = [[startX, startY]];
-        let area = 0;
-
-        while(stack.length) {
-            const [x, y] = stack.pop();
-            const idx = y*width + x;
-
-            if(x<0 || x>=width || y<0 || y>=height) continue;
-            if(!mask[idx] || visited[idx]) continue;
-
-            visited[idx] = true;
-            area++;
-
-            stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+        if (pixels.length >= minArea) {
+          for (const idx of pixels) valid[idx] = 1;
         }
-        return area;
+      }
+      return valid;
     }
 
-    // 文件处理
     function setupFileInput(inputId, resultId, previewId) {
-        document.getElementById(inputId).addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if(!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const img = new Image();
-                img.onload = function() {
-// 更新预览图片
-                    document.getElementById(previewId).src = event.target.result;
-                    const result=processImage(img, document.getElementById(resultId));
-                    if(inputId === 'standardFile') {
-                        standardResult = result;
-                    } else {
-                        testResult = result;
-                    }
-                };
-                img.src = event.target.result;
-            };
-            reader.readAsDataURL(file);
-        });
+      document.getElementById(inputId).addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (inputId === 'standardFile') standardResult = null;
+        else testResult = null;
+        document.getElementById('verificationResult').textContent = '';
+        const resultDiv = document.getElementById(resultId);
+        resultDiv.textContent = '正在处理图片...';
+        const reader = new FileReader();
+        reader.onerror = () => { resultDiv.textContent = '文件读取失败'; };
+        reader.onload = function(event) {
+          const img = new Image();
+          img.onerror = () => { resultDiv.textContent = '无法解析图片'; };
+          img.onload = function() {
+            document.getElementById(previewId).src = event.target.result;
+            try {
+              const result = processImage(img, resultDiv);
+              if (inputId === 'standardFile') standardResult = result;
+              else testResult = result;
+            } catch (err) {
+              resultDiv.textContent = '图片处理失败：' + err.message;
+            }
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
     }
 
     setupFileInput('standardFile', 'standardResult', 'standardPreview');
     setupFileInput('testFile', 'testResult', 'testPreview');
 
     function verifyFunction() {
-        const g_difference=(standardResult.greenPercentage-testResult.greenPercentage)/standardResult.greenPercentage
-        const y_difference=(standardResult.yellowPercentage-testResult.yellowPercentage)/standardResult.yellowPercentage
-        if(Math.abs(g_difference)<0.1 && Math.abs(y_difference)<0.1){
-            alert('Image verification successful!')
-        }else {
-            alert('Image verification failed.')
-        }
+      const output = document.getElementById('verificationResult');
+      if (!standardResult || !testResult) {
+        output.textContent = '请先上传标准图片和待验证图片。';
+        alert(output.textContent);
+        return;
+      }
+      const g0 = standardResult.g;
+      const b0 = standardResult.b;
+      if (g0 === 0 || b0 === 0) {
+        output.textContent = '标准图片中没有识别到有效的绿色或蓝色区域，请检查拍摄条件和阈值。';
+        alert(output.textContent);
+        return;
+      }
+      const gDifference = (g0 - testResult.g) / g0;
+      const bDifference = (b0 - testResult.b) / b0;
+      if (Math.abs(gDifference) < 0.1 && Math.abs(bDifference) < 0.1) {
+        output.textContent = 'Image verification successful!';
+      } else {
+        output.textContent = 'Image verification failed.';
+      }
+      alert(output.textContent);
     }
-
-</script>
+  </script>
 </body>
 </html>
